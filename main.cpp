@@ -1,9 +1,14 @@
 #include <iostream>
 #include <boost/numeric/ublas/matrix_sparse.hpp>
+#include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/storage.hpp>
 #include <boost/program_options.hpp>
 #include <boost/tokenizer.hpp>
+#include <boost/serialization/serialization.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 #include <fstream>
+
 
 namespace ublas = boost::numeric::ublas;
 namespace po = boost::program_options;
@@ -19,20 +24,15 @@ struct Options {
 struct Stats {
     int words_number = 0;           // Nubmer of all words in the analysed text
     int unique_words_number = 0;    // Nubmer of unique words in the analysed text
-    int max_numver = 0;             // Max number of one unique word found in the analysed text
-
-};
+    int max_number = 0;             // Max number of one unique word found in the analysed text
+    std::map<int, int> sentence_len;       // number of words in sentences depending of sentence length
+} stats;
 
 typedef std::map<string, int> Dictionary;
+typedef ublas::compressed_matrix<int> Matrix;
 
 
 
-void show_array(const ublas::unbounded_array<double>& a)  {
-    for(const int &element : a ) {
-        std::cout << element << ' ';
-    }
-    cout << endl;
-}
 
 int parse_command_line(int ac, char* av[], Options & options) {
 
@@ -83,6 +83,9 @@ int parse_command_line(int ac, char* av[], Options & options) {
 
 const std::string & read_file(const std::string & file_name, std::string & out) {
     std::ifstream ifs(file_name);
+    if( ! ifs.is_open()) {
+        std::cerr << "can't open input file: " << file_name << endl;
+    }
     out.assign((std::istreambuf_iterator<char>(ifs)),
                std::istreambuf_iterator<char>());
     return out;
@@ -114,9 +117,12 @@ void print_dictionary(const Dictionary & dictionary) {
 
 void fill_dictionary(const std::string & str, Dictionary & dictionary) {
 
+    int number_of_words = 0;
     typedef boost::tokenizer<> tokenizer;
     tokenizer tok{str};
+
     for (const auto &t : tok) {
+        number_of_words++;
 //        std::cout << t << '\n';
         // add a new pair <word, number of this word in the text>
         auto ret = dictionary.insert({t,1});
@@ -125,13 +131,63 @@ void fill_dictionary(const std::string & str, Dictionary & dictionary) {
             ret.first->second++;
         }
     }
+
+    if(number_of_words > 0) {
+        stats.words_number += number_of_words;
+        // add a new pair <number of words in sentence, number of sentences with this number of words>
+        auto ret = stats.sentence_len.insert({number_of_words, 1});
+        // if this number of words is already in the dictionary increase the number sentences
+        if (ret.second == false) {
+            ret.first->second++;
+        }
+    }
 }
+
+void print_stats() {
+
+    /*
+     *     int words_number = 0;           // Number of all words in the analysed text
+    int unique_words_number = 0;    // Number of all unique words in the analysed text
+    int max_number = 0;             // Max number of one unique word found in the analysed text
+    std::map<int, int> sentence_len;       // number of words in sentences depending of sentence length
+     */
+    cout << "Statistics:" << endl
+         << stats.words_number << ": Number of all words in the text" << endl
+         << stats.unique_words_number << ": Number of unique words in the text" << endl
+         << stats.max_number << ": Max number of one unique word found in the analysed text" << endl << endl
+         << "Number of words in sentences depending of sentence length: <words : sentences>" << endl;
+    for (const auto & t : stats.sentence_len) {
+        std::cout << t.first << " : "
+                  << t.second << endl;
+    }
+}
+
+void save_matrix(const Matrix & m, const string & file_name) {
+    std::ofstream ofs(file_name);
+    boost::archive::binary_oarchive oarch(ofs);
+    oarch << m;
+    // m.serialize(oarch, 1);
+}
+
+void load_matrix(Matrix & m, const string & file_name) {
+    std::ifstream ifs(file_name);
+    boost::archive::binary_iarchive iarch(ifs);
+    iarch >> m;
+}
+
+void show_array(Matrix::value_array_type & a)  {
+
+    for(const auto &element : a ) {
+        std::cout << element << ' ';
+    }
+    cout << endl;
+}
+
 
 int main(int ac, char* av[]) {
 
 //    setlocale(LC_CTYPE, "Russian_Russia.1251");
 
-    Stats stats;
     Options options;
     Dictionary dictionary;
 
@@ -145,15 +201,24 @@ int main(int ac, char* av[]) {
     read_file(options.input, the_text);
 
     typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
-    boost::char_separator<char> sep{"."};
+    boost::char_separator<char> sep(".?!;");
     tokenizer tok{the_text, sep};
     for (const auto &t : tok) {
 //        std::cout << t << '\n';
         fill_dictionary(t, dictionary);
     }
 
+    stats.unique_words_number = dictionary.size();
+
+    for(const auto &pair : dictionary ) {
+        stats.max_number = std::max(stats.max_number, pair.second);
+    }
+
+
+
 //    print_dictionary(dictionary);
 
+    print_stats();
 
 
 /*
@@ -166,7 +231,8 @@ int main(int ac, char* av[]) {
     cout << text;
 */
 
-    ublas::compressed_matrix<double> m (10, 10, 3 * 10);
+    Matrix m (10, 10);
+    Matrix m2;
 
     m(0, 5) = 1; // underlying array is {1, 0, 0, 0, ...}
     show_array(m.value_data());
@@ -176,6 +242,18 @@ int main(int ac, char* av[]) {
     show_array(m.value_data());
     m(0, 4) = 7;  // underlying array is {7, 1, 2, 0, ...}
     show_array(m.value_data());
-    std::cout << "Hello, World!" << std::endl;
+
+    std::cout << m << std::endl;
+
+    std::cout << "Save matrix" << std::endl;
+
+    save_matrix(m, "matrix.bin");
+
+    std::cout << "Load matrix" << std::endl;
+
+    load_matrix(m2, "matrix.bin");
+
+    std::cout << m2 << std::endl;
+
     return 0;
 }
