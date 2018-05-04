@@ -1,5 +1,6 @@
 #include <iostream>
 #include <boost/numeric/ublas/matrix_sparse.hpp>
+#include <boost/numeric/ublas/matrix_proxy.hpp>
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/storage.hpp>
 #include <boost/program_options.hpp>
@@ -8,6 +9,9 @@
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <fstream>
+#include <queue>
+#include <codecvt>
+#include <unordered_map>
 
 
 namespace ublas = boost::numeric::ublas;
@@ -22,15 +26,21 @@ struct Options {
 } options;
 
 struct Stats {
-    int words_number = 0;           // Nubmer of all words in the analysed text
-    int unique_words_number = 0;    // Nubmer of unique words in the analysed text
+    int words_number = 0;           // Number of all words in the analysed text
+    int unique_words_number = 0;    // Number of unique words in the analysed text
     int max_number = 0;             // Max number of one unique word found in the analysed text
+    string max_word;
     std::map<int, int> sentence_len;       // number of words in sentences depending of sentence length
+    int matrix_size = 0;
+    int matrix_rows = 0;
+    int matrix_cols = 0;
 } stats;
 
 typedef std::map<string, int> Dictionary;
+typedef std::vector<string> Words_array;
+typedef std::vector<int> Words_probability;
 typedef ublas::compressed_matrix<int> Matrix;
-
+typedef std::vector<Words_array> Sentences_array;
 
 
 
@@ -115,14 +125,47 @@ void print_dictionary(const Dictionary & dictionary) {
     cout << "Total words: " << word_num << endl;
 }
 
-void fill_dictionary(const std::string & str, Dictionary & dictionary) {
+wstring toLow(const wstring & s)
+{
+    wstring result;
+    locale loc = wcin.getloc() ;
+    for (wstring::const_iterator it = s.begin() ; it != s.end() ; ++it)
+    {
+        result += std::use_facet<ctype<wchar_t>>(loc).tolower( *it );
+    }
+    return result;
+}
+
+std::wstring & wstr_tolower(std::wstring & s) {
+    std::transform(s.begin(), s.end(), s.begin(),
+                   [](unsigned wchar_t c) {
+                       return std::tolower(c, std::locale());
+                   }
+    );
+    return s;
+}
+
+
+std::string & str_tolower(std::string & s) {
+    std::transform(s.begin(), s.end(), s.begin(),
+                   [](unsigned char c) {
+                       return std::tolower(c, std::locale());
+                   }
+    );
+    return s;
+}
+
+void fill_dictionary(const std::string & str, Dictionary & dictionary, Sentences_array & sentences) {
 
     int number_of_words = 0;
     typedef boost::tokenizer<> tokenizer;
     tokenizer tok{str};
 
+    Words_array words_array;
+
     for (const auto &t : tok) {
         number_of_words++;
+        words_array.push_back(t);
 //        std::cout << t << '\n';
         // add a new pair <word, number of this word in the text>
         auto ret = dictionary.insert({t,1});
@@ -131,6 +174,8 @@ void fill_dictionary(const std::string & str, Dictionary & dictionary) {
             ret.first->second++;
         }
     }
+
+    sentences.push_back(words_array);
 
     if(number_of_words > 0) {
         stats.words_number += number_of_words;
@@ -141,6 +186,136 @@ void fill_dictionary(const std::string & str, Dictionary & dictionary) {
             ret.first->second++;
         }
     }
+}
+
+void fill_matrix(Matrix & matrix, const Sentences_array & sentences, const Words_array & words_array, Words_probability & first_word_prob, Words_probability & last_word_prob) {
+
+    // std::queue<int> prev_words_index;
+//    prev_words_index.reserve(options.dim);
+
+    for (const auto &sentence : sentences) {
+
+        // Ignore one word sentences. It must contains at least two words to be processed.
+        if(sentence.size() < 2) { continue; }
+/*
+        cout << "process sentence: ";
+        for (const auto& i: sentence) {
+            std::cout << i << ' ';
+        }
+        cout << endl;
+*/
+        // get index of the first word in the sentence
+        auto iterator = std::lower_bound(words_array.begin(), words_array.end(), sentence.front());
+
+        cout << "sentence.front() = " << sentence.front() << endl;
+
+        if(iterator == words_array.end()) {
+            cerr << "The word: " << sentence.front() << " was not found in words_array!" << endl;
+        }
+        auto index = iterator - words_array.begin();
+        cout << "index = " << index << endl;
+
+        first_word_prob[index] = first_word_prob[index] + 1;
+
+        cout << "first_word_prob[index] = " << first_word_prob[index] << endl;
+
+        cout << "words_array[index] = " << words_array[index] << endl;
+
+
+        // get index of the last word in the sentence
+        iterator = std::lower_bound(words_array.begin(), words_array.end(), sentence.back());
+        if(iterator == words_array.end()) {
+            cerr << "The word: " << sentence.front() << " was not found in words_array!" << endl;
+        }
+        index =  iterator - words_array.begin();
+        last_word_prob[index] = last_word_prob[index] + 1;
+
+        size_t col = 0, row = 0;
+        for (const auto &word : sentence) {
+
+            if (col == 0) {
+                col = std::lower_bound(words_array.begin(), words_array.end(), word) - words_array.begin();
+//                cout << "add word to col: " << word << endl;
+            } else if (row == 0) {
+                row = std::lower_bound(words_array.begin(), words_array.end(), word) - words_array.begin();
+//                cout << "add word to row: " << word << endl;
+            }
+
+            if ((col != 0) && (row != 0)) {
+                matrix(col, row) = matrix(col, row) + 1;
+//                cout << "add to matrix col=" << words_array[col] << " row=" << words_array[row] << endl;
+                col = row;
+                row = 0;
+            }
+        }
+    }
+}
+
+/// Add words probability to the matrix
+/// \param word Word for adding
+/// \param word_pos position of the word in a sentence
+/// \param word_num number of words in a sentence
+/// \param dictionary
+/// \param matrix
+
+void add_word(const std::string & word, int word_pos, int word_num, Words_probability & first_word_prob, Words_probability & last_word_prob, Words_array & words_array, Matrix & matrix) {
+
+
+    static std::vector<int> prev_words_index(options.dim);
+
+    // int index = distance(dictionary.begin(), dictionary.find(word)) + 1;
+
+    // index of the word in the words array;
+    size_t index = std::lower_bound(words_array.begin(), words_array.end(), word) - words_array.begin();
+
+    /*
+    using namespace boost::numeric::ublas;
+    compressed_matrix<double> m (3, 3, 3 * 3);
+    for (unsigned i = 0; i < m.size1 (); ++ i)
+        for (unsigned j = 0; j < m.size2 (); ++ j)
+            m (i, j) = 3 * i + j;
+    std::cout << m << std::endl;     */
+    // if first word
+    if(word_pos == 0) {
+
+        // Increase probability of appearance of this word first in the sencence
+        first_word_prob[index] = first_word_prob[index] + 1;
+    }
+    // if last word
+    else if(word_pos == word_num) {
+        // Increase probability of appearance of this word last in the sencence
+        last_word_prob[index] = last_word_prob[index] + 1;
+    }
+    // middle word
+    else {
+    }
+
+    unsigned int col = 0;
+    unsigned int row = index;
+    matrix(col, row) = matrix(col, row) + 1;
+
+
+
+/*
+    switch (word_pos) {
+        case 0: {
+
+            break;
+        }
+        case 1: {
+
+            break;
+        }
+        case 2: {
+
+            break;
+        }
+    }
+*/
+    if(prev_words_index.size() > options.dim) {
+        prev_words_index.clear();
+    }
+    prev_words_index.push_back(index);
 }
 
 void print_stats() {
@@ -154,7 +329,10 @@ void print_stats() {
     cout << "Statistics:" << endl
          << stats.words_number << ": Number of all words in the text" << endl
          << stats.unique_words_number << ": Number of unique words in the text" << endl
-         << stats.max_number << ": Max number of one unique word found in the analysed text" << endl << endl
+         << stats.max_number << ": Max number of one unique word found in the text. The word is: " << stats.max_word << endl
+            << stats.matrix_size << ": matrix size" << endl
+            << stats.matrix_rows << ": matrix rows" << endl
+            << stats.matrix_cols << ": matrix cols" << endl << endl
          << "Number of words in sentences depending of sentence length: <words : sentences>" << endl;
     for (const auto & t : stats.sentence_len) {
         std::cout << t.first << " : "
@@ -183,13 +361,140 @@ void show_array(Matrix::value_array_type & a)  {
     cout << endl;
 }
 
+template< class InputIt>
+int get_prob(InputIt first, InputIt last, size_t size, std::mt19937 & gen) {
+//    std::random_device rd;
+//    std::mt19937 gen(rd());
+    std::discrete_distribution<> dd(first, last); // инициализируем контейнер для генерации числа на основе распределения вероятности
+    int res = dd(gen);
+    if (res == size) {// тонкости работы генератора, если распределение вероятностей нулевое, то он возвращает количество элементов
+        cerr << "array is empty or filled by zeroes" << endl;
+        exit(1);
+    }
+    return res;
+};
+/*
+std::string & make_next_word(std::string & word, Matrix & matrix, const Words_array & words_array) {
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::discrete_distribution<> dd_first_word(first_word_prob.begin(), first_word_prob.end()); // инициализируем контейнер для генерации числа на основе распределения вероятности
+    int first_word_index = dd_first_word(gen); // генерируем следующую вершину
+    if (first_word_index == first_word_prob.size()) {// тонкости работы генератора, если распределение вероятностей нулевое, то он возвращает количество элементов
+        cerr << "first_word_prob array is empty or filled by zeroes" << endl;
+        exit(1);
+    }
+}
+*/
+std::string & make_sentence(std::string & s, Matrix & matrix, const Words_array & words_array, Words_probability & first_word_prob, Words_probability & last_word_prob, std::mt19937 & gen) {
+
+    std::vector<string> new_sentence;
+
+
+    int first_word_index = get_prob(first_word_prob.begin(), first_word_prob.end(), first_word_prob.size(), gen);
+
+
+/*
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::discrete_distribution<> dd_first_word(first_word_prob.begin(), first_word_prob.end()); // инициализируем контейнер для генерации числа на основе распределения вероятности
+    int first_word_index = dd_first_word(gen); // генерируем следующую вершину
+    if (first_word_index == first_word_prob.size()) {// тонкости работы генератора, если распределение вероятностей нулевое, то он возвращает количество элементов
+        cerr << "first_word_prob array is empty or filled by zeroes" << endl;
+        exit(1);
+    }
+
+    std::discrete_distribution<> dd_last_word(last_word_prob.begin(), last_word_prob.end());
+    int last_word_index = dd_last_word(gen);
+    if (last_word_index == last_word_prob.size()) {
+        cerr << "last_word_prob array is empty or filled by zeroes" << endl;
+        exit(1);
+    }
+*/
+
+    int last_word_index = get_prob(last_word_prob.begin(), last_word_prob.end(), last_word_prob.size(), gen);
+
+    std::vector<std::pair<int,int>> num_len_of_sentences;
+    std::vector<int> nums;
+
+    for (const auto & t : stats.sentence_len) {
+        num_len_of_sentences.push_back({t.second, t.first});
+        nums.push_back(t.second);
+    }
+
+/*
+    std::discrete_distribution<> dd_sentence_len(num_len_of_sentences.begin(), num_len_of_sentences.end());
+    int number_of_sentences = dd_sentence_len(gen);
+    if (number_of_sentences == num_len_of_sentences.size()) {
+        cerr << "len_num_of_sentences array is empty or filled by zeroes" << endl;
+        exit(1);
+    }
+
+    int sentence_length = num_len_of_sentences.at(number_of_sentences);
+*/
+
+    int index_in_nums = get_prob(nums.begin(), nums.end(), nums.size(), gen);
+
+    int sentence_length = num_len_of_sentences[index_in_nums].second;
+
+
+    if(sentence_length < 2) {
+        sentence_length = 2;
+    }
+    // Generate of words in the middle of the sentence
+
+    // Add first word to the sentence
+    new_sentence.push_back(words_array[first_word_index]);
+
+
+    string current_word(words_array[first_word_index]);
+
+    int col_index = first_word_index;
+
+    // i == 1 because the first word is already generated in first_word_index
+    for(int i = 1; i < sentence_length; ++i) {
+
+        ublas::matrix_row<Matrix> mr = ublas::row(matrix, col_index);
+
+        std::cout << "ROW: " << mr << endl;
+
+        int row_index = get_prob(mr.begin(), mr.end(), mr.size(), gen);
+        std::cout << "ROW index: " << row_index << endl;
+        new_sentence.push_back(words_array[row_index]);
+        ++i;
+        if(i < sentence_length) {
+            ublas::matrix_column<Matrix> mc = ublas::column(matrix, row_index);
+            std::cout << "COL: " << mr << endl;
+            col_index = get_prob(mc.begin(), mc.end(), mc.size(), gen);
+            std::cout << "COL index: " << col_index << endl;
+
+            new_sentence.push_back(words_array[col_index]);
+        }
+        else {
+            break;
+        }
+    }
+
+    for (const auto & word : new_sentence) {
+        s.append(word);
+        s.push_back(' ');
+    }
+    s.back() = '.';
+}
+
+
 
 int main(int ac, char* av[]) {
 
-//    setlocale(LC_CTYPE, "Russian_Russia.1251");
+//    std::locale::global( std::locale("ru_RU.utf-8") );
+    // std::setlocale(LC_ALL, "ru_RU.utf-8");
 
     Options options;
     Dictionary dictionary;
+    Words_array words_array;
+    Words_probability first_word_prob, last_word_prob;
+
+    Sentences_array sentences;
 
     parse_command_line(ac, av, options);
 
@@ -200,25 +505,99 @@ int main(int ac, char* av[]) {
     std::string the_text;
     read_file(options.input, the_text);
 
+    // std::cout << "locale setting is " << std::locale().name().c_str() << endl;
+//    printf ("Locale is: %s\n", setlocale(LC_ALL,NULL) );
+    //convert the text to lower case
+//    std::transform(the_text.begin(), the_text.end(), the_text.begin(), ::tolower);
+
+//    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+//    std::wstring wide = converter.from_bytes(the_text);
+/*
+    wcout.imbue( locale("ru_RU.utf-8") );
+    std::wcout << "-----" << endl;
+    std::wcout << wide << endl;
+    std::wcout << "-----" << endl;
+
+    toLow(wide);
+*/
     typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
     boost::char_separator<char> sep(".?!;");
     tokenizer tok{the_text, sep};
-    for (const auto &t : tok) {
-//        std::cout << t << '\n';
-        fill_dictionary(t, dictionary);
+    for (auto &t : tok) {
+        // std::cout << t << '\n';
+        fill_dictionary(t, dictionary, sentences);
     }
 
     stats.unique_words_number = dictionary.size();
 
+    words_array.reserve(stats.unique_words_number);
+    first_word_prob.resize(stats.unique_words_number, 0);
+    last_word_prob.resize(stats.unique_words_number, 0);
+
     for(const auto &pair : dictionary ) {
-        stats.max_number = std::max(stats.max_number, pair.second);
+        if(stats.max_number < pair.second) {
+            stats.max_number = pair.second;
+            stats.max_word = pair.first;
+        }
+//        stats.max_number = std::max(stats.max_number, pair.second);
+        words_array.push_back(pair.first);
     }
 
 
+    Matrix matrix(stats.unique_words_number, stats.unique_words_number);
 
-//    print_dictionary(dictionary);
+    fill_matrix(matrix, sentences, words_array, first_word_prob, last_word_prob);
+
+    stats.matrix_size = matrix.value_data().size();
+    stats.matrix_cols = matrix.size1();
+    stats.matrix_rows = matrix.size2();
+
+    print_dictionary(dictionary);
 
     print_stats();
+
+
+    std::cout << "First words with their numbers <word : number> " << endl;
+
+    for (auto i = 0; i < words_array.size(); ++i) {
+        std::cout << words_array[i]  << " : " << first_word_prob[i] << endl;
+    }
+/*
+
+    std::cout << "Last words with their numbers <word : number> " << endl;
+
+    for (auto i = 0; i < words_array.size(); ++i) {
+        std::cout << words_array[i]  << " : " << last_word_prob[i] << endl;
+    }
+
+    std::cout << matrix << std::endl;
+
+    std::cout << "Print non zero probabilities of dependings of words <first word [number] last word >" << endl;
+
+    for (unsigned i = 0; i < matrix.size1 (); ++ i) {
+        for (unsigned j = 0; j < matrix.size2(); ++j) {
+            auto cell = matrix(i, j);
+            if (cell != 0) {
+                std::cout << words_array[i] << " [" << cell << "] " << words_array[j] << std::endl;
+            }
+        }
+    }
+*/
+
+    // ----- generation --------
+
+    std::mt19937 gen { std::random_device()() };
+
+    std::string sentence1;
+    std::string sentence2;
+    std::string sentence3;
+    make_sentence(sentence1, matrix, words_array, first_word_prob, last_word_prob, gen);
+//    make_sentence(sentence2, matrix, words_array, first_word_prob, last_word_prob, gen);
+//    make_sentence(sentence3, matrix, words_array, first_word_prob, last_word_prob, gen);
+
+    // ------ print sentence -------
+
+    std::cout << "Generated text: " << sentence1 << " " << sentence2 <<  " " << sentence3 << endl;
 
 
 /*
@@ -229,7 +608,7 @@ int main(int ac, char* av[]) {
     std::transform(text.begin(), text.end(), text.begin(), ::tolower);
 
     cout << text;
-*/
+
 
     Matrix m (10, 10);
     Matrix m2;
@@ -254,6 +633,6 @@ int main(int ac, char* av[]) {
     load_matrix(m2, "matrix.bin");
 
     std::cout << m2 << std::endl;
-
+*/
     return 0;
 }

@@ -6,3 +6,5 @@ gawk -v RS='[^[:alpha:]]+' '{sum[$0]++} END{for (word in sum) print word,sum[wor
 gawk -v RS='[^[:alpha:]]+' '{sum[$0]++} END{for (word in sum) print word,sum[word]}' bibliya_utf.txt > out.txt
 sort out.txt 
 sort out.txt > outs.txt
+# convert the text to lower case
+awk '{print tolower($0)}' < input.txt
