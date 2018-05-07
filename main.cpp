@@ -207,19 +207,19 @@ void fill_matrix(Matrix & matrix, const Sentences_array & sentences, const Words
         // get index of the first word in the sentence
         auto iterator = std::lower_bound(words_array.begin(), words_array.end(), sentence.front());
 
-        cout << "sentence.front() = " << sentence.front() << endl;
+//        cout << "sentence.front() = " << sentence.front() << endl;
 
         if(iterator == words_array.end()) {
             cerr << "The word: " << sentence.front() << " was not found in words_array!" << endl;
         }
         auto index = iterator - words_array.begin();
-        cout << "index = " << index << endl;
+//        cout << "index = " << index << endl;
 
         first_word_prob[index] = first_word_prob[index] + 1;
 
-        cout << "first_word_prob[index] = " << first_word_prob[index] << endl;
+//        cout << "first_word_prob[index] = " << first_word_prob[index] << endl;
 
-        cout << "words_array[index] = " << words_array[index] << endl;
+//        cout << "words_array[index] = " << words_array[index] << endl;
 
 
         // get index of the last word in the sentence
@@ -242,7 +242,7 @@ void fill_matrix(Matrix & matrix, const Sentences_array & sentences, const Words
             }
 
             if ((col != 0) && (row != 0)) {
-                matrix(col, row) = matrix(col, row) + 1;
+                matrix(row, col) = matrix(row, col) + 1;
 //                cout << "add to matrix col=" << words_array[col] << " row=" << words_array[row] << endl;
                 col = row;
                 row = 0;
@@ -362,15 +362,11 @@ void show_array(Matrix::value_array_type & a)  {
 }
 
 template< class InputIt>
-int get_prob(InputIt first, InputIt last, size_t size, std::mt19937 & gen) {
+int get_prob(InputIt first, InputIt last, std::mt19937 & gen) {
 //    std::random_device rd;
 //    std::mt19937 gen(rd());
     std::discrete_distribution<> dd(first, last); // инициализируем контейнер для генерации числа на основе распределения вероятности
     int res = dd(gen);
-    if (res == size) {// тонкости работы генератора, если распределение вероятностей нулевое, то он возвращает количество элементов
-        cerr << "array is empty or filled by zeroes" << endl;
-        exit(1);
-    }
     return res;
 };
 /*
@@ -386,33 +382,33 @@ std::string & make_next_word(std::string & word, Matrix & matrix, const Words_ar
     }
 }
 */
-std::string & make_sentence(std::string & s, Matrix & matrix, const Words_array & words_array, Words_probability & first_word_prob, Words_probability & last_word_prob, std::mt19937 & gen) {
+
+Words_probability & get_row(Matrix & matrix, Words_probability & row, size_t row_index) {
+    auto row_size = matrix.size1();
+    row.reserve(row_size);
+    for(auto i = 0; i < row_size; ++i) {
+        Matrix::const_reference element = matrix(row_index, i);
+        row.push_back(element);
+    }
+}
+
+Words_probability & get_col(Matrix & matrix, Words_probability & col, size_t col_index) {
+    auto col_size = matrix.size2();
+    col.reserve(col_size);
+    for(auto i = 0; i < col_size; ++i) {
+        Matrix::const_reference element = matrix(i, col_index);
+        col.push_back(element);
+    }
+}
+
+std::string & make_sentence(std::string & s, Matrix & matrix, const Words_array & words_array, Words_probability & first_word_prob, Words_probability & last_word_prob, Words_probability & words_prob_array, std::mt19937 & gen) {
 
     std::vector<string> new_sentence;
 
 
-    int first_word_index = get_prob(first_word_prob.begin(), first_word_prob.end(), first_word_prob.size(), gen);
+    int first_word_index = get_prob(first_word_prob.begin(), first_word_prob.end(),  gen);
 
-
-/*
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::discrete_distribution<> dd_first_word(first_word_prob.begin(), first_word_prob.end()); // инициализируем контейнер для генерации числа на основе распределения вероятности
-    int first_word_index = dd_first_word(gen); // генерируем следующую вершину
-    if (first_word_index == first_word_prob.size()) {// тонкости работы генератора, если распределение вероятностей нулевое, то он возвращает количество элементов
-        cerr << "first_word_prob array is empty or filled by zeroes" << endl;
-        exit(1);
-    }
-
-    std::discrete_distribution<> dd_last_word(last_word_prob.begin(), last_word_prob.end());
-    int last_word_index = dd_last_word(gen);
-    if (last_word_index == last_word_prob.size()) {
-        cerr << "last_word_prob array is empty or filled by zeroes" << endl;
-        exit(1);
-    }
-*/
-
-    int last_word_index = get_prob(last_word_prob.begin(), last_word_prob.end(), last_word_prob.size(), gen);
+//    int last_word_index = get_prob(last_word_prob.begin(), last_word_prob.end(), last_word_prob.size(), gen);
 
     std::vector<std::pair<int,int>> num_len_of_sentences;
     std::vector<int> nums;
@@ -421,7 +417,17 @@ std::string & make_sentence(std::string & s, Matrix & matrix, const Words_array 
         num_len_of_sentences.push_back({t.second, t.first});
         nums.push_back(t.second);
     }
+/*
+    cout << endl << "Print num_len_of_sentences <Number of sentences : length of sentences>" << endl;
+    for (const auto & t : num_len_of_sentences) {
+        cout << t.first << " : " << t.second << endl;
+    }
 
+    cout << endl << "Print nums:" << endl;
+    for (const auto & t : nums) {
+        cout << t << endl;
+    }
+*/
 /*
     std::discrete_distribution<> dd_sentence_len(num_len_of_sentences.begin(), num_len_of_sentences.end());
     int number_of_sentences = dd_sentence_len(gen);
@@ -433,10 +439,13 @@ std::string & make_sentence(std::string & s, Matrix & matrix, const Words_array 
     int sentence_length = num_len_of_sentences.at(number_of_sentences);
 */
 
-    int index_in_nums = get_prob(nums.begin(), nums.end(), nums.size(), gen);
+    int index_in_nums = get_prob(nums.begin(), nums.end(), gen);
+
+//    cout << endl << "index_in_nums=" << index_in_nums << endl;
 
     int sentence_length = num_len_of_sentences[index_in_nums].second;
 
+//    cout << endl << "sentence_length=" << sentence_length << endl;
 
     if(sentence_length < 2) {
         sentence_length = 2;
@@ -446,33 +455,56 @@ std::string & make_sentence(std::string & s, Matrix & matrix, const Words_array 
     // Add first word to the sentence
     new_sentence.push_back(words_array[first_word_index]);
 
-
-    string current_word(words_array[first_word_index]);
+//    string current_word(words_array[first_word_index]);
 
     int col_index = first_word_index;
 
     // i == 1 because the first word is already generated in first_word_index
     for(int i = 1; i < sentence_length; ++i) {
 
-        ublas::matrix_row<Matrix> mr = ublas::row(matrix, col_index);
+        Words_probability col;
+        get_col(matrix, col, col_index);
 
-        std::cout << "ROW: " << mr << endl;
+/*
+        std::cout << "COL index: " << col_index << " word: " << words_array[col_index] << endl;
 
-        int row_index = get_prob(mr.begin(), mr.end(), mr.size(), gen);
-        std::cout << "ROW index: " << row_index << endl;
-        new_sentence.push_back(words_array[row_index]);
-        ++i;
+        for(int i = 0; i < col.size(); ++i) {
+            if(col[i] != 0) {
+                std::cout << "i=" << i << " d=" << col[i] << endl;
+            }
+        }
+*/
+        int row_index = get_prob(col.begin(), col.end(), gen);
+
+        col_index = row_index;
+
+        new_sentence.push_back(words_array[col_index]);
+
+/*
+//        std::cout << "ROW index: " << row_index << " word: " << words_array[row_index] << endl;
+//        new_sentence.push_back(words_array[row_index]);
+//      ++i;
+
         if(i < sentence_length) {
-            ublas::matrix_column<Matrix> mc = ublas::column(matrix, row_index);
-            std::cout << "COL: " << mr << endl;
-            col_index = get_prob(mc.begin(), mc.end(), mc.size(), gen);
-            std::cout << "COL index: " << col_index << endl;
+
+            ublas::matrix_row<Matrix> mr = ublas::row(matrix, row_index);
+
+            vector<int> v1 (mr.begin(), mr.end());
+
+            for(int i = 0; i < v1.size(); ++i) {
+                if(v1[i] != 0) {
+                    std::cout << "i=" << i << " d=" << v1[i] << endl;
+                }
+            }
+
+            col_index = get_prob(v1.begin(), v1.end(), v1.size(), gen);
 
             new_sentence.push_back(words_array[col_index]);
         }
         else {
             break;
         }
+*/
     }
 
     for (const auto & word : new_sentence) {
@@ -492,7 +524,7 @@ int main(int ac, char* av[]) {
     Options options;
     Dictionary dictionary;
     Words_array words_array;
-    Words_probability first_word_prob, last_word_prob;
+    Words_probability first_word_prob, last_word_prob, words_prob_array;
 
     Sentences_array sentences;
 
@@ -541,6 +573,7 @@ int main(int ac, char* av[]) {
         }
 //        stats.max_number = std::max(stats.max_number, pair.second);
         words_array.push_back(pair.first);
+        words_prob_array.push_back(pair.second);
     }
 
 
@@ -552,16 +585,17 @@ int main(int ac, char* av[]) {
     stats.matrix_cols = matrix.size1();
     stats.matrix_rows = matrix.size2();
 
-    print_dictionary(dictionary);
+//    print_dictionary(dictionary);
 
     print_stats();
 
-
+/*
     std::cout << "First words with their numbers <word : number> " << endl;
 
     for (auto i = 0; i < words_array.size(); ++i) {
         std::cout << words_array[i]  << " : " << first_word_prob[i] << endl;
     }
+*/
 /*
 
     std::cout << "Last words with their numbers <word : number> " << endl;
@@ -571,14 +605,15 @@ int main(int ac, char* av[]) {
     }
 
     std::cout << matrix << std::endl;
-
+*/
+/*
     std::cout << "Print non zero probabilities of dependings of words <first word [number] last word >" << endl;
 
     for (unsigned i = 0; i < matrix.size1 (); ++ i) {
         for (unsigned j = 0; j < matrix.size2(); ++j) {
             auto cell = matrix(i, j);
             if (cell != 0) {
-                std::cout << words_array[i] << " [" << cell << "] " << words_array[j] << std::endl;
+                std::cout << words_array[i] << " [col=" << i << " row=" << j << " cell="<< cell << "] " << words_array[j] << std::endl;
             }
         }
     }
@@ -588,16 +623,18 @@ int main(int ac, char* av[]) {
 
     std::mt19937 gen { std::random_device()() };
 
-    std::string sentence1;
-    std::string sentence2;
-    std::string sentence3;
-    make_sentence(sentence1, matrix, words_array, first_word_prob, last_word_prob, gen);
-//    make_sentence(sentence2, matrix, words_array, first_word_prob, last_word_prob, gen);
-//    make_sentence(sentence3, matrix, words_array, first_word_prob, last_word_prob, gen);
+    std::string sentence;
+    cout << "Generated text: " << endl;
+
+    for( int i = 0; i < 10; ++i) {
+        make_sentence(sentence, matrix, words_array, first_word_prob, last_word_prob, words_prob_array, gen);
+        std::cout <<  sentence << endl;
+        sentence.clear();
+    }
 
     // ------ print sentence -------
 
-    std::cout << "Generated text: " << sentence1 << " " << sentence2 <<  " " << sentence3 << endl;
+
 
 
 /*
