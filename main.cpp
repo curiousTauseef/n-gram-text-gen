@@ -101,28 +101,19 @@ const std::string & read_file(const std::string & file_name, std::string & out) 
     return out;
 }
 
+/*
 bool remove_predicate(const unsigned char c) {
     // needed to avoid undefined behavior
     // static_cast<unsigned char>(ch);
 
     return ! (isalpha(c) && isblank(c) && (c == '.') );
-
 }
+
 
 const std::string & clean_text(std::string & str) {
     str.erase(std::remove_if(str.begin(), str.end(), remove_predicate),
               str.end());
     return str;
-}
-
-void print_dictionary(const Dictionary & dictionary) {
-    int word_num = 0;
-    for(const auto & p : dictionary) {
-        cout << p.first << " " << p.second << endl;
-        word_num += p.second;
-    }
-    cout << "Unique words: " << dictionary.size() << endl;
-    cout << "Total words: " << word_num << endl;
 }
 
 wstring toLow(const wstring & s)
@@ -154,6 +145,19 @@ std::string & str_tolower(std::string & s) {
     );
     return s;
 }
+*/
+
+
+void print_dictionary(const Dictionary & dictionary) {
+    int word_num = 0;
+    for(const auto & p : dictionary) {
+        cout << p.first << " " << p.second << endl;
+        word_num += p.second;
+    }
+    cout << "Unique words: " << dictionary.size() << endl;
+    cout << "Total words: " << word_num << endl;
+}
+
 
 void fill_dictionary(const std::string & str, Dictionary & dictionary, Sentences_array & sentences) {
 
@@ -250,7 +254,7 @@ void fill_matrix(Matrix & matrix, const Sentences_array & sentences, const Words
         }
     }
 }
-
+/*
 /// Add words probability to the matrix
 /// \param word Word for adding
 /// \param word_pos position of the word in a sentence
@@ -268,13 +272,14 @@ void add_word(const std::string & word, int word_pos, int word_num, Words_probab
     // index of the word in the words array;
     size_t index = std::lower_bound(words_array.begin(), words_array.end(), word) - words_array.begin();
 
-    /*
-    using namespace boost::numeric::ublas;
-    compressed_matrix<double> m (3, 3, 3 * 3);
-    for (unsigned i = 0; i < m.size1 (); ++ i)
-        for (unsigned j = 0; j < m.size2 (); ++ j)
-            m (i, j) = 3 * i + j;
-    std::cout << m << std::endl;     */
+//    / *
+//    using namespace boost::numeric::ublas;
+//    compressed_matrix<double> m (3, 3, 3 * 3);
+//    for (unsigned i = 0; i < m.size1 (); ++ i)
+//        for (unsigned j = 0; j < m.size2 (); ++ j)
+//            m (i, j) = 3 * i + j;
+//    std::cout << m << std::endl;
+//    * /
     // if first word
     if(word_pos == 0) {
 
@@ -296,27 +301,28 @@ void add_word(const std::string & word, int word_pos, int word_num, Words_probab
 
 
 
-/*
-    switch (word_pos) {
-        case 0: {
 
-            break;
-        }
-        case 1: {
+//    switch (word_pos) {
+//        case 0: {
+//
+//            break;
+//        }
+//        case 1: {
+//
+//            break;
+//        }
+//        case 2: {
+//
+//            break;
+//        }
+//    }
 
-            break;
-        }
-        case 2: {
-
-            break;
-        }
-    }
-*/
     if(prev_words_index.size() > options.dim) {
         prev_words_index.clear();
     }
     prev_words_index.push_back(index);
 }
+*/
 
 void print_stats() {
 
