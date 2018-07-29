@@ -512,6 +512,8 @@ std::string & make_sentence(std::string & s, Matrix & matrix, const Words_array 
         s.push_back(' ');
     }
     s.back() = '.';
+
+    return s;
 }
 
 
