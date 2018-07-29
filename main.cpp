@@ -568,6 +568,10 @@ int main(int ac, char* av[]) {
         fill_dictionary(t, dictionary, sentences);
     }
 
+    // free memory of the unneeded text
+    the_text.clear();
+    the_text.shrink_to_fit();
+
     stats.unique_words_number = dictionary.size();
 
     words_array.reserve(stats.unique_words_number);
