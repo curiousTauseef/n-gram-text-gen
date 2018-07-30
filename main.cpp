@@ -39,7 +39,8 @@ struct Stats {
 typedef std::map<string, int> Dictionary;
 typedef std::vector<string> Words_array;
 typedef std::vector<int> Words_probability;
-typedef ublas::compressed_matrix<int> Matrix;
+typedef ublas::compressed_matrix<int> Matrix2D;
+typedef ublas::compressed_matrix<Matrix2D> Matrix4D;
 typedef std::vector<Words_array> Sentences_array;
 
 
@@ -192,7 +193,7 @@ void fill_dictionary(const std::string & str, Dictionary & dictionary, Sentences
     }
 }
 
-void fill_matrix(Matrix & matrix, const Sentences_array & sentences, const Words_array & words_array, Words_probability & first_word_prob, Words_probability & last_word_prob) {
+void fill_matrix(Matrix2D & matrix, const Sentences_array & sentences, const Words_array & words_array, Words_probability & first_word_prob, Words_probability & last_word_prob) {
 
     // std::queue<int> prev_words_index;
 //    prev_words_index.reserve(options.dim);
@@ -262,7 +263,7 @@ void fill_matrix(Matrix & matrix, const Sentences_array & sentences, const Words
 /// \param dictionary
 /// \param matrix
 
-void add_word(const std::string & word, int word_pos, int word_num, Words_probability & first_word_prob, Words_probability & last_word_prob, Words_array & words_array, Matrix & matrix) {
+void add_word(const std::string & word, int word_pos, int word_num, Words_probability & first_word_prob, Words_probability & last_word_prob, Words_array & words_array, Matrix2D & matrix) {
 
 
     static std::vector<int> prev_words_index(options.dim);
@@ -346,20 +347,20 @@ void print_stats() {
     }
 }
 
-void save_matrix(const Matrix & m, const string & file_name) {
+void save_matrix(const Matrix2D & m, const string & file_name) {
     std::ofstream ofs(file_name);
     boost::archive::binary_oarchive oarch(ofs);
     oarch << m;
     // m.serialize(oarch, 1);
 }
 
-void load_matrix(Matrix & m, const string & file_name) {
+void load_matrix(Matrix2D & m, const string & file_name) {
     std::ifstream ifs(file_name);
     boost::archive::binary_iarchive iarch(ifs);
     iarch >> m;
 }
 
-void show_array(Matrix::value_array_type & a)  {
+void show_array(Matrix2D::value_array_type & a)  {
 
     for(const auto &element : a ) {
         std::cout << element << ' ';
@@ -376,7 +377,7 @@ int get_prob(InputIt first, InputIt last, std::mt19937 & gen) {
     return res;
 };
 /*
-std::string & make_next_word(std::string & word, Matrix & matrix, const Words_array & words_array) {
+std::string & make_next_word(std::string & word, Matrix2D & matrix, const Words_array & words_array) {
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -389,25 +390,25 @@ std::string & make_next_word(std::string & word, Matrix & matrix, const Words_ar
 }
 */
 
-Words_probability & get_row(Matrix & matrix, Words_probability & row, size_t row_index) {
+Words_probability & get_row(Matrix2D & matrix, Words_probability & row, size_t row_index) {
     auto row_size = matrix.size1();
     row.reserve(row_size);
     for(auto i = 0; i < row_size; ++i) {
-        Matrix::const_reference element = matrix(row_index, i);
+        Matrix2D::const_reference element = matrix(row_index, i);
         row.push_back(element);
     }
 }
 
-Words_probability & get_col(Matrix & matrix, Words_probability & col, size_t col_index) {
+Words_probability & get_col(Matrix2D & matrix, Words_probability & col, size_t col_index) {
     auto col_size = matrix.size2();
     col.reserve(col_size);
     for(auto i = 0; i < col_size; ++i) {
-        Matrix::const_reference element = matrix(i, col_index);
+        Matrix2D::const_reference element = matrix(i, col_index);
         col.push_back(element);
     }
 }
 
-std::string & make_sentence(std::string & s, Matrix & matrix, const Words_array & words_array, Words_probability & first_word_prob, Words_probability & last_word_prob, Words_probability & words_prob_array, std::mt19937 & gen) {
+std::string & make_sentence(std::string & s, Matrix2D & matrix, const Words_array & words_array, Words_probability & first_word_prob, Words_probability & last_word_prob, Words_probability & words_prob_array, std::mt19937 & gen) {
 
     std::vector<string> new_sentence;
 
@@ -493,7 +494,7 @@ std::string & make_sentence(std::string & s, Matrix & matrix, const Words_array 
 
         if(i < sentence_length) {
 
-            ublas::matrix_row<Matrix> mr = ublas::row(matrix, row_index);
+            ublas::matrix_row<Matrix2D> mr = ublas::row(matrix, row_index);
 
             vector<int> v1 (mr.begin(), mr.end());
 
@@ -589,7 +590,8 @@ int main(int ac, char* av[]) {
     }
 
 
-    Matrix matrix(stats.unique_words_number, stats.unique_words_number);
+    Matrix2D matrix(stats.unique_words_number, stats.unique_words_number);
+    Matrix4D matrix4D(stats.unique_words_number, stats.unique_words_number);
 
     fill_matrix(matrix, sentences, words_array, first_word_prob, last_word_prob);
 
@@ -659,8 +661,8 @@ int main(int ac, char* av[]) {
     cout << text;
 
 
-    Matrix m (10, 10);
-    Matrix m2;
+    Matrix2D m (10, 10);
+    Matrix2D m2;
 
     m(0, 5) = 1; // underlying array is {1, 0, 0, 0, ...}
     show_array(m.value_data());
