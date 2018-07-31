@@ -193,7 +193,8 @@ void fill_dictionary(const std::string & str, Dictionary & dictionary, Sentences
     }
 }
 
-void fill_matrix(Matrix2D & matrix, const Sentences_array & sentences, const Words_array & words_array, Words_probability & first_word_prob, Words_probability & last_word_prob) {
+void fill_matrix2D(Matrix2D &matrix, const Sentences_array &sentences, const Words_array &words_array,
+                   Words_probability &first_word_prob, Words_probability &last_word_prob) {
 
     // std::queue<int> prev_words_index;
 //    prev_words_index.reserve(options.dim);
@@ -593,7 +594,7 @@ int main(int ac, char* av[]) {
     Matrix2D matrix(stats.unique_words_number, stats.unique_words_number);
     Matrix4D matrix4D(stats.unique_words_number, stats.unique_words_number);
 
-    fill_matrix(matrix, sentences, words_array, first_word_prob, last_word_prob);
+    fill_matrix2D(matrix, sentences, words_array, first_word_prob, last_word_prob);
 
     stats.matrix_size = matrix.value_data().size();
     stats.matrix_cols = matrix.size1();
