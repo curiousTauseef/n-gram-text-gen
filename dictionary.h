@@ -22,11 +22,9 @@
 
 namespace ublas = boost::numeric::ublas;
 namespace po = boost::program_options;
-using namespace std;
 
-
-typedef std::map<string, int> Dict;
-typedef std::vector<string> Words_array;
+typedef std::map<std::string, int> Dict;
+typedef std::vector<std::string> Words_array;
 typedef std::vector<int> Words_probability;
 typedef ublas::compressed_vector<int> CVector;
 typedef ublas::compressed_vector<CVector> Matrix2D;
@@ -40,7 +38,7 @@ struct Stats {
     int words_number = 0;           // Number of all words in the analysed text
     int unique_words_number = 0;    // Number of unique words in the analysed text
     int max_number = 0;             // Max number of one unique word found in the analysed text
-    string max_word;
+    std::string max_word;
     std::map<int, int> sentence_len;       // number of words in sentences depending of sentence length
     int matrix_size = 0;
     int matrix_rows = 0;
@@ -53,17 +51,17 @@ struct Stats {
         int max_number = 0;             // Max number of one unique word found in the analysed text
         std::map<int, int> sentence_len;       // number of words in sentences depending of sentence length
          */
-        cout << "Statistics:" << endl
-             << words_number << ": Number of all words in the text" << endl
-             << unique_words_number << ": Number of unique words in the text" << endl
-             << max_number << ": Max number of one unique word found in the text. The word is: " << max_word << endl
-             << matrix_size << ": matrix size" << endl
-             << matrix_rows << ": matrix rows" << endl
-             << matrix_cols << ": matrix cols" << endl << endl
-             << "Number of words in sentences depending of sentence length: <words : sentences>" << endl;
+        std::cout << "Statistics:" << std::endl
+             << words_number << ": Number of all words in the text" << std::endl
+             << unique_words_number << ": Number of unique words in the text" << std::endl
+             << max_number << ": Max number of one unique word found in the text. The word is: " << max_word << std::endl
+             << matrix_size << ": matrix size" << std::endl
+             << matrix_rows << ": matrix rows" << std::endl
+             << matrix_cols << ": matrix cols" << std::endl << std::endl
+             << "Number of words in sentences depending of sentence length: <words : sentences>" << std::endl;
         for (const auto & t : sentence_len) {
             std::cout << t.first << " : "
-                      << t.second << endl;
+                      << t.second << std::endl;
         }
     }
 } stats;
@@ -73,14 +71,14 @@ class Dictionary {
     Dict dictionary;
     Words_array words_array;
     Sentences_array sentences;
-    string text;
+    std::string text;
 
     Words_probability first_word_prob, last_word_prob, words_prob_array;
 
     bool read_file(const std::string & file_name) {
         std::ifstream ifs(file_name);
         if( ! ifs.is_open()) {
-            std::cerr << "can't open input file: " << file_name << endl;
+            std::cerr << "can't open input file: " << file_name << std::endl;
             return false;
         }
         text.assign((std::istreambuf_iterator<char>(ifs)),

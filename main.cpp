@@ -1,5 +1,5 @@
 #include "dictionary.h"
-
+#include "hypercube.h"
 
 const int FIRST_WORD = 1, LAST_WORD = 0;
 
