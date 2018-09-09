@@ -17,6 +17,16 @@
 namespace ublas = boost::numeric::ublas;
 
 // typedef ublas::compressed_vector<int> CVector;
+/*
+template<typename DimT, size_t DimsN>
+struct dims_t {
+    std::array<DimT, DimsN> dims;
+    bool operator<(const dims_t &rhs) const {
+        return dims < rhs;
+    }
+    static size_t get_dim() { return DimsN; }
+};
+
 
 template<typename T>
 struct index2d {
@@ -47,15 +57,18 @@ struct index4d {
     }
     static int get_dim() { return 4; }
 };
+*/
 
-
-template<typename T, typename indexT>
+template<typename T, typename DimT, size_t DimsN>
 class hcube_t {
+public:
 
-    using datamap_t = std::map<indexT, T>;
+    using index_type = std::array<DimT, DimsN>;
+    using datamap_t = std::map<index_type, T>;
+
+private:
 
     datamap_t m_data;
-
     size_t m_size;
 
 public:
@@ -68,9 +81,9 @@ public:
     typedef  value_type *          pointer;
     typedef  const value_type *    const_pointer;
 
-    static int get_dim() { return indexT::get_dim(); }
+    static size_t get_dim() { return DimsN; }
 
-    hcube_t(size_t size = 0): m_size(size) {
+    explicit hcube_t(size_t size = 0): m_size(size) {
 
     }
 
@@ -95,10 +108,10 @@ public:
     }
 
     size_t data_bytes() const {
-        return m_data.size() * sizeof(indexT) + sizeof(T);
+        return m_data.size() * sizeof(index_type) + sizeof(T);
     }
 
-    reference operator[](const indexT & i) {
+    reference operator[](const index_type & i) {
         return m_data[i];
     }
 

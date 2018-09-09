@@ -159,11 +159,9 @@ public:
         return words_array[index];
     }
 
-    std::string & get_word(std::string & word, size_t * word_index, Words_probability & word_prob) {
-        auto index = get_prob(word_prob.begin() + 1, word_prob.end()) + 1;
-        *word_index = index;
+    void get_word(std::string & word, size_t * word_index, Words_probability & word_prob) {
+        *word_index = get_prob(word_prob.begin() + 1, word_prob.end()) + 1;
         word = get_word_by_index(*word_index);
-        return word;
     }
 
     const Words_array & get_words_array() const {

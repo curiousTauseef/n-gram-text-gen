@@ -9,14 +9,12 @@ using namespace std;
 typedef size_t index_type;
 typedef size_t data_type;
 
-typedef index2d<index_type> Index2D;
-typedef index4d<index_type> Index4D;
+// typedef index2d<index_type> Index2D;
+// typedef index4d<index_type> Index4D;
 
-typedef hcube_t<data_type, Index2D> HCube2D;
-typedef hcube_t<data_type, Index4D> HCube4D;
+typedef hcube_t<data_type, index_type, 2> HCube2D;
+typedef hcube_t<data_type, index_type, 4> HCube4D;
 
-
-const int FIRST_WORD = 1, LAST_WORD = 0;
 
 struct Options {
     int dim = 2;
@@ -413,15 +411,6 @@ void load_matrix(Matrix2D & m, const string & file_name) {
     boost::archive::binary_iarchive iarch(ifs);
     iarch >> m;
 }
-
-
-void show_array(Matrix2D::value_array_type & a)  {
-
-    for(const auto &element : a ) {
-        std::cout << element << ' ';
-    }
-    cout << endl;
-}
 */
 
 void print_probs(const Words_probability & probs, const Words_array & words_array) {
@@ -437,10 +426,10 @@ void get_col(HCube2D & matrix, Words_probability & col, size_t col_index) {
     col.clear();
     col.resize(col_size, 0);
     for (const auto & item : matrix) {
-        Index2D index = item.first;
+        HCube2D::index_type index = item.first;
         size_t data = item.second;
-        if(index.x == col_index) {
-            col[index.y] = data;
+        if(index[0] == col_index) {
+            col[index[1]] = data;
         }
     }
 }
@@ -451,11 +440,39 @@ void get_line(HCube4D & m, Words_probability & line, size_t line_index) {
     line.clear();
     line.resize(line_size, 0);
     for (const auto & item : m) {
-        Index4D index = item.first;
+        HCube4D::index_type index = item.first;
         size_t data = item.second;
-        if(index.d1 == line_index) {
-            line[index.d2] = data;
+/*
+        switch (dim)  {
+            case 1: {
+                if(index.d1 == line_index) {
+                    line[index.d1] = data;
+                }
+                break;
+            }
+            case 2: {
+                if(index.d2 == line_index) {
+                    line[index.d2] = data;
+                }
+                break;
+            }
+            case 3: {
+                if(index.d3 == line_index) {
+                    line[index.d3] = data;
+                }
+                break;
+            }
+            case 4: {
+                if(index.d4 == line_index) {
+                    line[index.d4] = data;
+                }
+                break;
+            }
+            default:  {
+                cout << "Switch ERROR!!!" << endl;
+            }
         }
+*/
     }
 }
 
@@ -472,7 +489,8 @@ std::string & make_sentence(std::string & s, HCube2D & hCube2D, Dictionary & dic
 //    print_probs(row, dictionary.get_words_array());
 
     size_t first_word_index = 0;
-    std::string first_word = dictionary.get_word(first_word, &first_word_index, row);
+    std::string first_word;
+    dictionary.get_word(first_word, &first_word_index, row);
     new_sentence.push_back(first_word);
 
     size_t index = first_word_index;
@@ -516,7 +534,8 @@ std::string & make_sentence(std::string & s, HCube4D & hCube4D, Dictionary & dic
 //    print_probs(row, dictionary.get_words_array());
 
     size_t first_word_index = 0;
-    std::string first_word = dictionary.get_word(first_word, &first_word_index, row);
+    std::string first_word;
+    dictionary.get_word(first_word, &first_word_index, row);
     new_sentence.push_back(first_word);
 
     size_t index = first_word_index;
@@ -610,13 +629,13 @@ std::string & make_sentence(std::string & s, Matrix2D & matrix, const Words_arra
 void print(HCube4D & m, Dictionary & dict) {
     std::cout << "Print matrix and words_array:" << std::endl;
     for (const auto & item : m) {
-        Index4D index = item.first;
+        HCube4D::index_type index = item.first;
         size_t data = item.second;
         std::cout  <<
-                   dict.get_word_by_index(index.d1) << " d1 = " << index.d1 << " "  <<
-                   dict.get_word_by_index(index.d2) << " d2 = " << index.d2  << " " <<
-                   dict.get_word_by_index(index.d3) << " d3 = " << index.d3 << " " <<
-                   dict.get_word_by_index(index.d2) << " d4 = " << index.d4 << " " <<
+                   dict.get_word_by_index(index[0]) << " d1 = " << index[0] << " "  <<
+                   dict.get_word_by_index(index[1]) << " d2 = " << index[1] << " " <<
+                   dict.get_word_by_index(index[2]) << " d3 = " << index[2] << " " <<
+                   dict.get_word_by_index(index[3]) << " d4 = " << index[3] << " " <<
                    " [" << data << "] " << std::endl;
     }
 }
@@ -626,9 +645,9 @@ void print(HCube4D & m, Dictionary & dict) {
 void print(HCube2D & m, Dictionary & dict) {
     std::cout << "Print matrix and words_array:" << std::endl;
     for (const auto & item : m) {
-        Index2D index = item.first;
+        HCube2D::index_type index = item.first;
         size_t data = item.second;
-        std::cout << dict.get_word_by_index(index.x) << " [" << data << "] " << dict.get_word_by_index(index.y) << " index.x = " << index.x << " index.y = " << index.y << std::endl;
+        std::cout << dict.get_word_by_index(index[0]) << " [" << data << "] " << dict.get_word_by_index(index[1]) << " index.x = " << index[0] << " index.y = " << index[1] << std::endl;
     }
 }
 
