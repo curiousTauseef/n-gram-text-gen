@@ -12,6 +12,7 @@
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/numeric/ublas/vector_sparse.hpp>
+#include <deque>
 
 
 namespace ublas = boost::numeric::ublas;
@@ -73,6 +74,7 @@ private:
 
 public:
 
+    typedef  std::deque<T> index_deque;
     typedef typename datamap_t::iterator iterator;
     typedef typename datamap_t::const_iterator const_iterator;
     typedef T                      value_type;
@@ -115,6 +117,13 @@ public:
         return m_data[i];
     }
 
+    reference at(const index_type & i) {
+        return m_data.at(i);
+    }
+
+    iterator find(const index_type & i) {
+        return m_data.find(i);
+    }
 };
 
 
