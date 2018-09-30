@@ -6,10 +6,6 @@
 #define TEXTGEN_DICTIONARY_H
 
 #include <iostream>
-#include <boost/numeric/ublas/matrix_sparse.hpp>
-#include <boost/numeric/ublas/matrix_proxy.hpp>
-#include <boost/numeric/ublas/io.hpp>
-#include <boost/numeric/ublas/storage.hpp>
 #include <boost/program_options.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/serialization/serialization.hpp>
@@ -21,16 +17,11 @@
 #include <unordered_map>
 #include "hypercube.h"
 
-namespace ublas = boost::numeric::ublas;
 namespace po = boost::program_options;
 
 typedef std::map<std::string, int> Dict;
 typedef std::vector<std::string> Words_array;
 typedef std::vector<int> Words_probability;
-// typedef ublas::compressed_vector<int> CVector;
-// typedef ublas::compressed_vector<CVector> Matrix2D;
-// typedef ublas::compressed_vector<Matrix2D> Matrix3D;
-// typedef ublas::compressed_vector<Matrix3D> Matrix4D;
 typedef std::vector<Words_array> Sentences_array;
 
 
@@ -126,7 +117,7 @@ public:
 
     template< class InputIt>
     size_t get_prob(InputIt first, InputIt last) {
-        std::discrete_distribution<> dd(first, last); // инициализируем контейнер для генерации числа на основе распределения вероятности
+        std::discrete_distribution<> dd(first, last);
         size_t res = static_cast<size_t>(dd(gen));
         return res;
     };

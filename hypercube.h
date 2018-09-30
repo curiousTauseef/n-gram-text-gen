@@ -6,59 +6,12 @@
 #define TEXTGEN_HYPERCUBE_H
 
 #include <vector>
-#include <boost/numeric/ublas/io.hpp>
-#include <boost/numeric/ublas/storage.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/numeric/ublas/vector_sparse.hpp>
 #include <deque>
 
-
-namespace ublas = boost::numeric::ublas;
-
-// typedef ublas::compressed_vector<int> CVector;
-/*
-template<typename DimT, size_t DimsN>
-struct dims_t {
-    std::array<DimT, DimsN> dims;
-    bool operator<(const dims_t &rhs) const {
-        return dims < rhs;
-    }
-    static size_t get_dim() { return DimsN; }
-};
-
-
-template<typename T>
-struct index2d {
-    T x;
-    T y;
-    bool operator<(const index2d &other) const {
-        if (x < other.x) return true;
-        if (other.x < x) return false;
-        return y < other.y;
-    }
-    static int get_dim() { return 2; }
-};
-
-template<typename T>
-struct index4d {
-    T d1;
-    T d2;
-    T d3;
-    T d4;
-    bool operator<(const index4d &other) const {
-        if (d1 < other.d1) return true;
-        if (other.d1 < d1) return false;
-        if (d2 < other.d2) return true;
-        if (other.d2 < d2) return false;
-        if (d3 < other.d3) return true;
-        if (other.d3 < d3) return false;
-        return d4 < other.d4;
-    }
-    static int get_dim() { return 4; }
-};
-*/
 
 template<typename T, typename DimT, size_t DimsN>
 class hcube_t {
@@ -127,7 +80,7 @@ public:
 };
 
 
-
+/*
 // proxy class because ublas vectors have ugly interface
 
 template<class Tp>
@@ -211,12 +164,6 @@ struct hcube_info<1, T>
     static type init(size_t innerdim, int value = 0){
         return type(innerdim);
     }
-/*
-    size_t real_size(size_t & a) {
-        a = type.r_size();
-        return a;
-    }
-*/
 };
 
 template<size_t N, typename T>
@@ -230,11 +177,6 @@ public:
     static type init(size_t innerdim, int value = 0) {
         return type(innerdim, base::init(innerdim, value));
     }
-/*
-    size_t real_size(type & t, size_t & a) {
-        return real_size(t, base::real_size(t, a));
-    }
-*/
 };
 
 //----------------------
@@ -291,5 +233,6 @@ public:
 private:
     vec_type c;
 };
+*/
 
 #endif //TEXTGEN_HYPERCUBE_H
