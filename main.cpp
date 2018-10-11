@@ -6,7 +6,7 @@ using namespace std;
 typedef size_t index_type;
 typedef size_t data_type;
 
-typedef hcube_t<data_type, index_type, 2> HCube4D;
+typedef hcube_t<data_type, index_type, 6> HCube4D;
 
 
 struct Options {
@@ -270,8 +270,10 @@ void print(HCube4D & m, Dictionary & dict) {
         std::cout  <<
                    dict.get_word_by_index(index[0]) << " d1 = " << index[0] << " "  <<
                    dict.get_word_by_index(index[1]) << " d2 = " << index[1] << " " <<
-//                   dict.get_word_by_index(index[2]) << " d3 = " << index[2] << " " <<
-//                   dict.get_word_by_index(index[3]) << " d4 = " << index[3] << " " <<
+                   dict.get_word_by_index(index[2]) << " d3 = " << index[2] << " " <<
+                   dict.get_word_by_index(index[3]) << " d4 = " << index[3] << " " <<
+                   dict.get_word_by_index(index[4]) << " d3 = " << index[4] << " " <<
+                   dict.get_word_by_index(index[5]) << " d4 = " << index[5] << " " <<
                    " [" << data << "] " << std::endl;
     }
 }
@@ -318,7 +320,7 @@ int main(int ac, char* av[]) {
 
     fill_hcube4D(hCube4D, dictionary);
 
-    print(hCube4D, dictionary);
+//    print(hCube4D, dictionary);
 
     stats.matrix_size = hCube4D.size() * HCube4D::get_dim();
     stats.matrix_cols = hCube4D.size();
@@ -336,7 +338,7 @@ int main(int ac, char* av[]) {
     std::string sentence;
     cout << "Generated text: " << endl;
 
-    for( int i = 0; i < 10; ++i) {
+    for( int i = 0; i < 50; ++i) {
 
         make_sentence(sentence, hCube4D, dictionary);
 
