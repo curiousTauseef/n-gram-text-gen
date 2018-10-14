@@ -13,17 +13,19 @@
 #include <deque>
 
 
-template<typename T, typename DimT, size_t DimsN>
+template<typename T, typename DimT>
 class hcube_t {
 public:
 
-    using index_type = std::array<DimT, DimsN>;
+//    using index_type = std::array<DimT, DimsN>;
+    using index_type = std::vector<DimT>;
     using datamap_t = std::map<index_type, T>;
 
 private:
 
     datamap_t m_data;
     size_t m_size;
+    size_t m_dims_num;
 
 public:
 
@@ -31,14 +33,15 @@ public:
     typedef typename datamap_t::iterator iterator;
     typedef typename datamap_t::const_iterator const_iterator;
     typedef T                      value_type;
+    typedef DimT                   dims_num_type;
     typedef value_type &           reference;
     typedef const value_type &     const_reference;
     typedef  value_type *          pointer;
     typedef  const value_type *    const_pointer;
 
-    static size_t get_dim() { return DimsN; }
+    size_t get_dimsN() const { return m_dims_num; }
 
-    explicit hcube_t(size_t size = 0): m_size(size) {
+    explicit hcube_t(size_t dimsN, size_t size = 0): m_size(size), m_dims_num(dimsN) {
 
     }
 

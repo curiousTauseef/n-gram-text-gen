@@ -6,14 +6,16 @@ using namespace std;
 typedef size_t index_type;
 typedef size_t data_type;
 
-typedef hcube_t<data_type, index_type, 6> HCube4D;
+typedef hcube_t<data_type, index_type> HCube;
 
 
 struct Options {
     int dim = 2;
+    int generate = 10;
     string input;
-    string matrix;
     bool print_chains = false;
+    bool print_dictionary = false;
+    bool print_stats = false;
 } options;
 
 int parse_command_line(int ac, char* av[], Options & options) {
@@ -22,12 +24,15 @@ int parse_command_line(int ac, char* av[], Options & options) {
 
         po::options_description desc("Allowed options");
         desc.add_options()
-                ("help", "produce help message")
-                ("dim", po::value<int>(), "set dimension of the matrix")
+                ("help", "show help message")
+                ("N", po::value<int>(), "set N-gram order (2 by default)")
+                ("generate", po::value<int>(), "set how many sentences to generate (10 by default)")
+//                ("max_length", po::value<int>(), "set max length of sentence (by default )")
                 ("input", po::value<string>(), "set input file for learning")
                 ("matrix", po::value<string>(), "set output file for saving of the matrix")
-                ("print_matrix", "print the matrix (for dimension = 2 only)")
-                ("print_chains", "print the chains")
+                ("print_stats", "print the statictics data")
+                ("print_chains", "print the N-gram chains")
+                ("print_dictionary", "print the dictionary")
                 ;
 
         po::variables_map vm;
@@ -39,20 +44,27 @@ int parse_command_line(int ac, char* av[], Options & options) {
             exit(0);
         }
 
+        if (vm.count("print_stats")) {
+            options.print_stats = true;
+        }
+
         if (vm.count("print_chains")) {
             options.print_chains = true;
         }
 
+        if (vm.count("print_dictionary")) {
+            options.print_dictionary = true;
+        }
 
         if (vm.count("input")) {
             options.input = vm["input"].as<string>();
         }
 
-        if (vm.count("dim")) {
-            options.dim = vm["dim"].as<int>();
+        if (vm.count("N")) {
+            options.dim = vm["N"].as<int>();
         }
 
-        cout << "Dimension of the matrix (2 or 4) = " << options.dim << endl;
+        cout << "N-gram order = " << options.dim << endl;
     }
     catch(exception& e) {
         cerr << "error: " << e.what() << endl;
@@ -112,44 +124,40 @@ std::string & str_tolower(std::string & s) {
 
 
 
-void shift_left(HCube4D::index_type & arr, int n = 1) {
+void shift_left(HCube::index_type & arr, int n = 1) {
     std::move(arr.begin()+n, arr.end(), arr.begin());
     std::fill(arr.end()-n, arr.end(), 0);
 }
 
-void shift_right(HCube4D::index_type & arr, int n = 1) {
+void shift_right(HCube::index_type & arr, int n = 1) {
     std::move_backward(arr.begin(), arr.end()-n, arr.end());
     std::fill(arr.begin(), arr.begin()+n, 0);
 }
 
 
 
-void fill_hcube4D(HCube4D & hcube, Dictionary & dict) {
+void fill_hcube(HCube &hcube, Dictionary &dict) {
 
     const Sentences_array & sentences = dict.get_sentences();
 
+    HCube::index_type words(hcube.get_dimsN(), 0);
+
     for (const auto &sentence : sentences) {
 
-        // HCube4D::index_deque words(4, 0);
-        HCube4D::index_type words {};
-        HCube4D::index_type empty {};
+        std::fill(words.begin(), words.end(), 0);
 
         auto iterations = sentence.size() + words.size() - 1;
 
         for ( auto i = 0; i < iterations; ++i) {
-            //words.pop_front();
-            // words.pop_back();
             shift_left(words);
             if(i < sentence.size()) {
                 size_t  index = dict.get_word_index(sentence[i]);
                 words.back() = index;
-                // words.push_front(index);
             }
             else {
-                //words.push_back(0);
-                //words.push_front(0);
             }
-            assert( words != empty && "ERROR!!!!");
+            bool zeros = std::all_of(words.begin(), words.end(), [](HCube::dims_num_type i) { return i==0; });
+            assert( ( ! zeros ) && "ERROR!!!!");
             (hcube[words]) ++;
         }
     }
@@ -178,7 +186,7 @@ void print_probs(const Words_probability & probs, const Words_array & words_arra
     }
 }
 
-size_t get_line(HCube4D & m, Words_probability & line, HCube4D::index_type line_index, size_t dim) {
+size_t get_line(HCube & m, Words_probability & line, HCube::index_type line_index, size_t dim) {
     size_t words_in_line = 0;
     auto line_size = m.size();
     line.clear();
@@ -196,18 +204,18 @@ size_t get_line(HCube4D & m, Words_probability & line, HCube4D::index_type line_
     return words_in_line;
 }
 
-std::string & make_sentence(std::string & s, HCube4D & hCube4D, Dictionary & dictionary) {
+std::string & make_sentence(std::string & s, HCube & hcube, Dictionary & dictionary) {
 
     std::vector<string> new_sentence;
 
     int length_of_sentence = dictionary.get_len_of_sentence();
 
-    auto dim = HCube4D::get_dim();
+    auto dim = hcube.get_dimsN();
 
-    HCube4D::index_type line_index {};
+    HCube::index_type line_index(hcube.get_dimsN(), 0);
 
     Words_probability row;
-    get_line(hCube4D, row, line_index, dim);
+    get_line(hcube, row, line_index, dim);
 
 //    print_probs(row, dictionary.get_words_array());
 
@@ -223,16 +231,14 @@ std::string & make_sentence(std::string & s, HCube4D & hCube4D, Dictionary & dic
 
     shift_left(line_index);
 
-//    --dim;
-
-    auto total_length = length_of_sentence + HCube4D::get_dim();
+    auto total_length = length_of_sentence + hcube.get_dimsN();
     // i == 1 because the first word is already generated in first_word_index
 //    for(auto i = 1; i < total_length; ++i) {
     for(auto i = 1; i < length_of_sentence; ++i) {
 
         Words_probability line;
 
-        if(get_line(hCube4D, line, line_index, dim) == 0) {
+        if(get_line(hcube, line, line_index, dim) == 0) {
             // if the line is empty return one word back
             // --i;
             //shift_right(line_index);
@@ -262,19 +268,15 @@ std::string & make_sentence(std::string & s, HCube4D & hCube4D, Dictionary & dic
 
 
 
-void print(HCube4D & m, Dictionary & dict) {
-    std::cout << "Print matrix and words_array:" << std::endl;
+void print(HCube & m, Dictionary & dict) {
+    std::cout << "Print N=grams:" << std::endl;
     for (const auto & item : m) {
-        HCube4D::index_type index = item.first;
+        HCube::index_type index = item.first;
         size_t data = item.second;
-        std::cout  <<
-                   dict.get_word_by_index(index[0]) << " d1 = " << index[0] << " "  <<
-                   dict.get_word_by_index(index[1]) << " d2 = " << index[1] << " " <<
-                   dict.get_word_by_index(index[2]) << " d3 = " << index[2] << " " <<
-                   dict.get_word_by_index(index[3]) << " d4 = " << index[3] << " " <<
-                   dict.get_word_by_index(index[4]) << " d3 = " << index[4] << " " <<
-                   dict.get_word_by_index(index[5]) << " d4 = " << index[5] << " " <<
-                   " [" << data << "] " << std::endl;
+        for(auto i = 0; i < m.get_dimsN(); ++i) {
+            std::cout  << dict.get_word_by_index(index[i]) << " (d" << i << "=" << index[i] << ") ";
+        }
+        std::cout  << " [" << data << "] " << std::endl;
     }
 }
 
@@ -314,33 +316,32 @@ int main(int ac, char* av[]) {
     // Init matrices
     // "+ 1" needs for counting of first and last words in the sentence.
 
-    HCube4D hCube4D(stats.unique_words_number + 1);
+    HCube hcube(options.dim, stats.unique_words_number + 1);
 
-    //dictionary.print();
+    if(options.print_dictionary) {
+        dictionary.print();
+    }
 
-    fill_hcube4D(hCube4D, dictionary);
+    fill_hcube(hcube, dictionary);
 
-//    print(hCube4D, dictionary);
+    if(options.print_chains) {
+        print(hcube, dictionary);
+    }
 
-    stats.matrix_size = hCube4D.size() * HCube4D::get_dim();
-    stats.matrix_cols = hCube4D.size();
-    stats.matrix_rows = hCube4D.size();
+    stats.matrix_size = hcube.size() * hcube.get_dimsN();
+    stats.matrix_cols = hcube.size();
+    stats.matrix_rows = hcube.size();
 
-    // fill 2D matrix by words probabilities and return probabilities of first and last words in the sentences
-    // fill_matrix2D(matrix, sentences, words_array, first_word_prob, last_word_prob);
-
-    stats.print_stats();
-
-    // ----- generation --------
-
-    // std::mt19937 gen { std::random_device()() };
+    if(options.print_stats) {
+        stats.print_stats();
+    }
 
     std::string sentence;
     cout << "Generated text: " << endl;
 
-    for( int i = 0; i < 50; ++i) {
+    for( int i = 0; i < options.generate; ++i) {
 
-        make_sentence(sentence, hCube4D, dictionary);
+        make_sentence(sentence, hcube, dictionary);
 
         std::cout <<  sentence << endl;
         sentence.clear();
