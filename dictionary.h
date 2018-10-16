@@ -15,6 +15,7 @@
 #include <queue>
 #include <codecvt>
 #include <unordered_map>
+#include <random>
 #include "hypercube.h"
 
 namespace po = boost::program_options;

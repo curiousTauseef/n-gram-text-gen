@@ -18,7 +18,7 @@ struct Options {
     bool print_stats = false;
 } options;
 
-int parse_command_line(int ac, char* av[], Options & options) {
+void parse_command_line(int ac, char* av[], Options & options) {
 
     try {
 
@@ -63,6 +63,11 @@ int parse_command_line(int ac, char* av[], Options & options) {
         if (vm.count("N")) {
             options.dim = vm["N"].as<int>();
         }
+
+        if (vm.count("generate")) {
+            options.generate = vm["generate"].as<int>();
+        }
+
 
         cout << "N-gram order = " << options.dim << endl;
     }
