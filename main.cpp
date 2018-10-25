@@ -30,7 +30,7 @@ void parse_command_line(int ac, char* av[], Options & options) {
 //                ("max_length", po::value<int>(), "set max length of sentence (by default )")
                 ("input", po::value<string>(), "set input file for learning")
                 ("matrix", po::value<string>(), "set output file for saving of the matrix")
-                ("print_stats", "print the statictics data")
+                ("print_stats", "print the statistics data")
                 ("print_chains", "print the N-gram chains")
                 ("print_dictionary", "print the dictionary")
                 ;
