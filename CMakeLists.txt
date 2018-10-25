@@ -18,6 +18,19 @@ if(MSVC AND (NOT MSVC_VERSION LESS 1910))
     endif()
 endif()
 
+if(MSVC AND ${Boost_FOUND})
+    SET(BOOST_ROOT $ENV{BOOST_ROOT})
+    message(STATUS "BOOST_ROOT in ${BOOST_ROOT}" )
+
+    SET(Boost_INCLUDEDIR $ENV{BOOST_ROOT})
+    message(STATUS "Boost_INCLUDEDIR in ${Boost_INCLUDEDIR}" )
+
+    SET(Boost_LIBRARYDIR $ENV{Boost_LIBRARYDIR})
+    message(STATUS "Boost_LIBRARYDIR in ${Boost_LIBRARYDIR}" )
+
+    include_directories(${Boost_INCLUDEDIR})
+endif()
+
 
 #set(c_flags -funroll-loops)
 #add_compile_options(
