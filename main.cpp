@@ -1,3 +1,26 @@
+/*
+
+Markov chain N-gram text generator for fast work with big number of N. Can work fast with N-grams where N can me much bigger than 10.
+Copyright © 2018  Oleksandr Molchevskyi
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+Contact email molchevsky@gmail.com
+
+*/
+
+
 #include "dictionary.h"
 
 
@@ -17,6 +40,12 @@ struct Options {
     bool print_dictionary = false;
     bool print_stats = false;
 } options;
+
+void print_copyright() {
+    cout << "Markov chain N-gram text generator." << endl
+         << "Copyright © 2018  Oleksandr Molchevskyi." << endl
+         << "Contact email molchevsky@gmail.com" << endl << endl;
+}
 
 void parse_command_line(int ac, char* av[], Options & options) {
 
@@ -288,6 +317,8 @@ void print(HCube & m, Dictionary & dict) {
 
 
 int main(int ac, char* av[]) {
+
+    print_copyright();
 
 //    std::locale::global( std::locale("ru_RU.utf-8") );
     // std::setlocale(LC_ALL, "ru_RU.utf-8");
